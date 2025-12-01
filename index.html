@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unit 3: Bouncing Colored Sphere</title>
+
+    <style>
+      /* Fullscreen canvas and dark background for contrast */
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #333;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+
+    <!-- Load Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.156.0/build/three.min.js"></script>
+  </head>
+
+  <body>
+    <script>
+      // =============================================================
+      // 1. SCENE, CAMERA, AND RENDERER
+      // =============================================================
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a1a);
+
+      const camera = new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.z = 10;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // =============================================================
+      // 2. LIGHTING (Required light-yellow from upper-left corner)
+      // =============================================================
+
+      // Soft ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+      scene.add(ambientLight);
+
+      // Light-yellow directional light (FFFFAA)
+      const directionalLight = new THREE.DirectionalLight(0xffffaa, 1.0);
+      directionalLight.position.set(-10, 10, 5); // fixed upper-left position
+      scene.add(directionalLight);
+
+      // =============================================================
+      // 3. SPHERE OBJECT (scaled small portion of view)
+      // =============================================================
+
+      const radius = 1.0;
+      const geometry = new THREE.SphereGeometry(radius, 32, 32);
+
+      const material = new THREE.MeshPhongMaterial({
+        color: 0x0000ff, // starting color
+        shininess: 50, // gives highlights/shadows
+      });
+
+      const object = new THREE.Mesh(geometry, material);
+      object.scale.set(0.8, 0.8, 0.8); // small in the viewport
+      scene.add(object);
+
+      // Start in center
+      object.position.set(0, 0, 0);
+
+      // =============================================================
+      // 4. MOVEMENT + COLOR CHANGE ON BOUNCE
+      // =============================================================
+
+      let velocityX = 0.05;
+      let velocityY = 0.04;
+
+      // Colors to cycle through
+      const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffa500, 0x800080];
+      let currentColorIndex = 0;
+
+      function changeColor() {
+        currentColorIndex = (currentColorIndex + 1) % colors.length;
+        object.material.color.setHex(colors[currentColorIndex]);
+      }
+
+      // Determine viewport limits in world coordinates
+      function getViewportLimits() {
+        const distance = camera.position.z - object.position.z;
+        const height =
+          2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        const width = height * camera.aspect;
+
+        return {
+          x: width / 2 - radius * object.scale.x,
+          y: height / 2 - radius * object.scale.y,
+        };
+      }
+
+      // =============================================================
+      // 5. ANIMATION LOOP
+      // =============================================================
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const limits = getViewportLimits();
+
+        // Update position
+        object.position.x += velocityX;
+        object.position.y += velocityY;
+
+        // Bounce horizontally
+        if (object.position.x > limits.x || object.position.x < -limits.x) {
+          velocityX = -velocityX;
+          object.position.x = THREE.MathUtils.clamp(
+            object.position.x,
+            -limits.x,
+            limits.x
+          );
+          changeColor(); // color change on collision
+        }
+
+        // Bounce vertically
+        if (object.position.y > limits.y || object.position.y < -limits.y) {
+          velocityY = -velocityY;
+          object.position.y = THREE.MathUtils.clamp(
+            object.position.y,
+            -limits.y,
+            limits.y
+          );
+          changeColor(); // color change on collision
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+
+      // =============================================================
+      // 6. HANDLE WINDOW RESIZE
+      // =============================================================
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    </script>
+  </body>
+</html>
